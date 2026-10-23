@@ -6,6 +6,7 @@ import (
 
 	"github.com/Luckny/recl/config"
 	"github.com/Luckny/recl/internal/logging"
+	"github.com/Luckny/recl/internal/server"
 )
 
 var (
@@ -24,5 +25,11 @@ func main() {
 		os.Exit(ConfigError)
 	}
 
-	logger.Info("loaded configuration", "config", cfg)
+	_, err = server.NewServerState(cfg, logger)
+	if err != nil {
+		logger.Error("Error creating server state", "err", err)
+		os.Exit(GeneralError)
+	}
+
+	// server.Run(state)
 }

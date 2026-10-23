@@ -19,11 +19,15 @@ const (
 	AOFSyncModeNo       AOFSyncMode = "no"
 )
 
+type AOFConfig struct {
+	Enabled  bool        `yaml:"enabled"`
+	Filename string      `yaml:"filename"`
+	Sync     AOFSyncMode `yaml:"sync"`
+}
+
 type Config struct {
-	DataDir     string      `yaml:"dataDir"`
-	AOFEnabled  bool        `yaml:"aofEnabled"`
-	AOFFilename string      `yaml:"aofFilename"`
-	AOFSync     AOFSyncMode `yaml:"aofSync"`
+	DataDir string    `yaml:"dataDir"`
+	AOF     AOFConfig `yaml:"aof"`
 }
 
 // LoadFile parses and validates the given YAML file into a read-only Config.
@@ -36,6 +40,11 @@ func LoadFile(filename string, logger *slog.Logger) (*Config, error) {
 	cfg, err := load(string(content))
 	if err != nil {
 		return nil, fmt.Errorf("parsing YAML file %s: %w", filename, err)
+	}
+
+	// Force DataDir
+	if cfg.DataDir == "" {
+		cfg.DataDir = "./data"
 	}
 
 	return cfg, nil
