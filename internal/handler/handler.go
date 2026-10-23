@@ -16,5 +16,6 @@ func InitHandlers(db *database.DB) map[string]Handler {
 	return map[string]Handler{
 		"PING": NewPingHandler(db),
 		"SET":  NewSetHandler(db),
+		"GET":  NewGetHandler(db),
 	}
 }

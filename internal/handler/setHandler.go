@@ -20,5 +20,10 @@ func (h *SetHandler) Handle(args []string, logger *slog.Logger) parser.Value {
 		return parser.ErrorValue("wrong number of arguments for 'set' command")
 	}
 
-	return parser.NullValue()
+	key := args[0]
+	value := args[1]
+
+	h.db.Set(key, value)
+
+	return parser.SimpleStringValue("OK")
 }

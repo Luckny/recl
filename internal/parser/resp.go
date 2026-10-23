@@ -10,7 +10,7 @@ import (
 	"unicode/utf8"
 )
 
-var CRLF = []byte("\r\n")
+var CRLF = "\r\n"
 
 var ErrIncomplete = errors.New("incomplete RESP value")
 
@@ -113,7 +113,7 @@ func (p *Parser) parseBulk(data []byte) (Value, int, error) {
 
 // parseLength reads a decimal length terminated by CRLF.
 func parseLength(data []byte) (int, []byte, error) {
-	before, after, ok := bytes.Cut(data, CRLF)
+	before, after, ok := bytes.Cut(data, []byte(CRLF))
 	if !ok {
 		return 0, nil, ErrIncomplete
 	}
@@ -129,11 +129,19 @@ func parseLength(data []byte) (int, []byte, error) {
 func RESPValue(v Value) ([]byte, error) {
 	switch v.Type {
 	case SimpleStingType:
-		return []byte(string(v.Type) + v.SimpleString + string(CRLF)), nil
+		return []byte(string(v.Type) + v.SimpleString + CRLF), nil
 	case ErrorType:
-		return []byte(string(v.Type) + v.Error + string(CRLF)), nil
+		return []byte(string(v.Type) + v.Error + CRLF), nil
 	case NullType:
-		return []byte(string(v.Type) + string(CRLF)), nil
+		return []byte(string(v.Type) + CRLF), nil
+	case BulkType:
+		return []byte(
+			string(v.Type) +
+				strconv.Itoa(len(v.Bulk)) +
+				CRLF +
+				v.Bulk +
+				CRLF,
+		), nil
 	default:
 		return nil, fmt.Errorf("unknown value type: %s", string(v.Type))
 	}

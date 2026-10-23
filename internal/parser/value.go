@@ -47,6 +47,10 @@ func (v *Value) PrintArray() string {
 	return "[" + strings.Join(values, ", ") + "]"
 }
 
+func BulkStringValue(data string) Value {
+	return Value{Type: BulkType, Bulk: data}
+}
+
 func NullValue() Value {
 	return Value{Type: NullType}
 }
