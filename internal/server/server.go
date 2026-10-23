@@ -13,7 +13,7 @@ type ServerState struct {
 	AOF *aof.AOF
 }
 
-func NewServerState(conf *config.Config, logger *slog.Logger) (*ServerState, error) {
+func NewServerState(conf *config.ReclConfig, logger *slog.Logger) (*ServerState, error) {
 	// create data dir if not created
 	err := os.MkdirAll(conf.DataDir, 0o755)
 	if err != nil {

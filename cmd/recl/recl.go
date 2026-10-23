@@ -2,6 +2,7 @@
 package main
 
 import (
+	"log/slog"
 	"os"
 
 	"github.com/Luckny/recl/config"
@@ -16,16 +17,17 @@ var (
 )
 
 func main() {
-	logConfig := &logging.LoggingConfig{}
-	logger := logging.New(logConfig)
+	bootstrapLogger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
-	cfg, err := config.LoadFile(config.DefaultFileName, logger)
+	cfg, err := config.LoadFile(config.DefaultFileName)
 	if err != nil {
-		logger.Error("Error loading config", "err", err)
+		bootstrapLogger.Error("Error loading config", "err", err)
 		os.Exit(ConfigError)
 	}
 
-	_, err = server.NewServerState(cfg, logger)
+	logger := logging.New(&cfg.App.Logging)
+
+	_, err = server.NewServerState(&cfg.Recl, logger)
 	if err != nil {
 		logger.Error("Error creating server state", "err", err)
 		os.Exit(GeneralError)

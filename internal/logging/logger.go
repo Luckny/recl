@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Luckny/recl/config"
 )
 
 const (
@@ -16,30 +18,25 @@ const (
 
 var defaultWriter = os.Stderr
 
-func New(config *LoggingConfig) *slog.Logger {
-	if config.Level == nil {
-		config.Level = &slog.LevelVar{}
-	}
-
-	if config.Writer == nil {
-		config.Writer = defaultWriter
-	}
+func New(config *config.LogConfig) *slog.Logger {
+	logLevel := &Level{}
+	logLevel.Set(config.Level)
 
 	logHandlerOpts := &slog.HandlerOptions{
-		Level:     config.Level,
+		Level:     logLevel.Level(),
 		AddSource: true,
 	}
 
-	logHandlerOpts.ReplaceAttr = replaceAttrFunc(config.Level)
+	logHandlerOpts.ReplaceAttr = replaceAttrFunc(logLevel)
 
 	if config.Format != "" && config.Format == "json" {
-		return slog.New(slog.NewJSONHandler(config.Writer, logHandlerOpts))
+		return slog.New(slog.NewJSONHandler(defaultWriter, logHandlerOpts))
 	}
 
-	return slog.New(slog.NewTextHandler(config.Writer, logHandlerOpts))
+	return slog.New(slog.NewTextHandler(defaultWriter, logHandlerOpts))
 }
 
-func replaceAttrFunc(level *slog.LevelVar) func(groups []string, a slog.Attr) slog.Attr {
+func replaceAttrFunc(level *Level) func(groups []string, a slog.Attr) slog.Attr {
 	return func(_ []string, a slog.Attr) slog.Attr {
 		key := a.Key
 		switch key {
