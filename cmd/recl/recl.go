@@ -18,10 +18,11 @@ func main() {
 	logConfig := &logging.LoggingConfig{}
 	logger := logging.New(logConfig)
 
-	if _, err := config.LoadFile(config.DefaultFileName); err != nil {
+	cfg, err := config.LoadFile(config.DefaultFileName, logger)
+	if err != nil {
 		logger.Error("Error loading config", "err", err)
 		os.Exit(ConfigError)
 	}
 
-	logger.Info("Config loaded successfully")
+	logger.Info("loaded configuration", "config", cfg)
 }

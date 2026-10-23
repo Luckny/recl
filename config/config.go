@@ -3,6 +3,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 
 	"go.yaml.in/yaml/v2"
@@ -10,10 +11,23 @@ import (
 
 var DefaultFileName = "recl.yaml"
 
-type Config struct{}
+type AOFSyncMode string
+
+const (
+	AOFSyncModeEverysec AOFSyncMode = "everysec"
+	AOFSyncModeAlways   AOFSyncMode = "always"
+	AOFSyncModeNo       AOFSyncMode = "no"
+)
+
+type Config struct {
+	DataDir     string      `yaml:"dataDir"`
+	AOFEnabled  bool        `yaml:"aofEnabled"`
+	AOFFilename string      `yaml:"aofFilename"`
+	AOFSync     AOFSyncMode `yaml:"aofSync"`
+}
 
 // LoadFile parses and validates the given YAML file into a read-only Config.
-func LoadFile(filename string) (*Config, error) {
+func LoadFile(filename string, logger *slog.Logger) (*Config, error) {
 	content, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
