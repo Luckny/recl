@@ -7,11 +7,13 @@ import (
 
 type ValueType rune
 
+// https://redis.io/docs/latest/develop/reference/protocol-spec/
 const (
 	ArrayType       ValueType = '*'
 	BulkType        ValueType = '$'
 	SimpleStingType ValueType = '+'
 	ErrorType       ValueType = '-'
+	NullType        ValueType = '_'
 )
 
 type Value struct {
@@ -45,10 +47,15 @@ func (v *Value) PrintArray() string {
 	return "[" + strings.Join(values, ", ") + "]"
 }
 
+func NullValue() Value {
+	return Value{Type: NullType}
+}
+
 func SimpleStringValue(message string) Value {
 	return Value{Type: SimpleStingType, SimpleString: message}
 }
 
+// ErrorValue returns a Value with the ErrorType and the message prefixed with "ERR "
 func ErrorValue(message string) Value {
 	return Value{Type: ErrorType, Error: "ERR " + message}
 }

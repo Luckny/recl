@@ -129,9 +129,11 @@ func parseLength(data []byte) (int, []byte, error) {
 func RESPValue(v Value) ([]byte, error) {
 	switch v.Type {
 	case SimpleStingType:
-		return []byte("+" + v.SimpleString + string(CRLF)), nil
+		return []byte(string(v.Type) + v.SimpleString + string(CRLF)), nil
 	case ErrorType:
-		return []byte("-" + v.Error + string(CRLF)), nil
+		return []byte(string(v.Type) + v.Error + string(CRLF)), nil
+	case NullType:
+		return []byte(string(v.Type) + string(CRLF)), nil
 	default:
 		return nil, fmt.Errorf("unknown value type: %s", string(v.Type))
 	}

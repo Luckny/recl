@@ -16,7 +16,7 @@ type Client struct {
 	Name   string
 	id     uint64 // private for now
 	Parser *parser.Parser
-	logger *slog.Logger
+	Logger *slog.Logger
 }
 
 func NewClient(conn net.Conn, id uint64, logger *slog.Logger) *Client {
@@ -26,7 +26,7 @@ func NewClient(conn net.Conn, id uint64, logger *slog.Logger) *Client {
 		Name:   name,
 		id:     id,
 		Parser: parser.NewParser(logger),
-		logger: logger,
+		Logger: logger,
 	}
 }
 
@@ -37,7 +37,7 @@ func (c *Client) WriteValue(value parser.Value) error {
 	}
 	_, err = io.Copy(c.Conn, bytes.NewReader(resp))
 	if err != nil {
-		c.logger.Error("failed to write value", "error", err)
+		c.Logger.Error("failed to write value", "error", err)
 	}
 
 	return nil

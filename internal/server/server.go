@@ -7,18 +7,22 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"strings"
 
 	"github.com/Luckny/recl/config"
 	"github.com/Luckny/recl/internal/aof"
 	"github.com/Luckny/recl/internal/client"
+	"github.com/Luckny/recl/internal/database"
 	"github.com/Luckny/recl/internal/handler"
 	"github.com/Luckny/recl/internal/parser"
 )
 
 type Server struct {
-	config *config.ReclConfig
-	logger *slog.Logger
-	aof    *aof.AOF
+	config   *config.ReclConfig
+	logger   *slog.Logger
+	aof      *aof.AOF
+	Handlers map[string]handler.Handler
+	db       *database.DB
 }
 
 func NewServer(conf *config.ReclConfig, logger *slog.Logger) (*Server, error) {
@@ -28,9 +32,12 @@ func NewServer(conf *config.ReclConfig, logger *slog.Logger) (*Server, error) {
 		return nil, err
 	}
 
+	db := database.NewDB()
+
 	server := &Server{
-		config: conf,
-		logger: logger,
+		config:   conf,
+		logger:   logger,
+		Handlers: handler.InitHandlers(db),
 	}
 
 	if conf.AOF.Enabled {
@@ -96,11 +103,38 @@ func (s *Server) handleConnection(conn net.Conn, connectionID uint64) {
 				return
 			}
 
-			response := handler.HandleValue(value)
+			response := s.handleValue(value, client.Logger)
 			if err := client.WriteValue(response); err != nil {
 				return
 			}
 
 		}
 	}
+}
+
+func (s *Server) handleValue(v parser.Value, logger *slog.Logger) parser.Value {
+	// should arrive as array
+	if v.Type != parser.ArrayType {
+		return parser.ErrorValue("expected an array")
+	}
+
+	if len(v.Array) == 0 {
+		return parser.ErrorValue("empty command")
+	}
+
+	args := make([]string, len(v.Array))
+	for i, arg := range v.Array {
+		if arg.Type != parser.BulkType {
+			return parser.ErrorValue("expected a bulk string")
+		}
+		args[i] = arg.Bulk
+	}
+
+	command := strings.ToUpper(args[0])
+	handler, ok := s.Handlers[command]
+	if !ok {
+		return parser.ErrorValue("invalid command")
+	}
+
+	return handler.Handle(args[1:], logger)
 }
