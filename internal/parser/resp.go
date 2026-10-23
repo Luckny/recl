@@ -7,16 +7,45 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 )
 
-var (
-	CRLF        = []byte("\r\n")
-	ArrayPrefix = '*'
-	BulkPrefix  = '$'
-)
+var CRLF = []byte("\r\n")
 
 var ErrIncomplete = errors.New("incomplete RESP value")
+
+type ValueType rune
+
+const (
+	ArrayPrefix ValueType = '*'
+	BulkPrefix  ValueType = '$'
+)
+
+type Value struct {
+	Type  ValueType
+	Bulk  string
+	Array []Value
+}
+
+func (v *Value) Print() string {
+	switch v.Type {
+	case ArrayPrefix:
+		return fmt.Sprintf("Array(%d) - %s", len(v.Array), v.PrintArray())
+	case BulkPrefix:
+		return fmt.Sprintf("Bulk(%d) - %s", len(v.Bulk), v.Bulk)
+	default:
+		return fmt.Sprintf("Unknown(%c)", v.Type)
+	}
+}
+
+func (v *Value) PrintArray() string {
+	values := make([]string, len(v.Array))
+	for i, element := range v.Array {
+		values[i] = element.Print()
+	}
+	return "[" + strings.Join(values, ", ") + "]"
+}
 
 type Parser struct {
 	buf    []byte
@@ -31,76 +60,85 @@ func (p *Parser) Append(data []byte) {
 	p.buf = append(p.buf, data...)
 }
 
-func (p *Parser) ParseNext() (any, error) {
+func (p *Parser) ParseNext() (Value, error) {
 	value, consumed, err := p.parseOne(p.buf)
 	if err != nil {
-		return nil, err
+		return Value{}, err
 	}
 	p.buf = p.buf[consumed:]
 
-	p.logger.Debug("recieved command", "value", value, "client buffer length", len(p.buf))
+	p.logger.Debug("recieved command", "value", value.Print(), "client buffer length", len(p.buf))
 	return value, nil
 }
 
-func (p *Parser) parseOne(data []byte) (value any, consumed int, err error) {
+func (p *Parser) parseOne(data []byte) (value Value, consumed int, err error) {
 	if len(data) == 0 {
-		return nil, 0, ErrIncomplete
+		return Value{}, 0, ErrIncomplete
 	}
 
 	dataPrefix, size := utf8.DecodeRune(data)
 	dataAfterPrefix := data[size:]
 
-	switch dataPrefix {
+	switch ValueType(dataPrefix) {
 	case ArrayPrefix:
 		return p.parseArray(dataAfterPrefix)
 	case BulkPrefix:
 		return p.parseBulk(dataAfterPrefix)
 	default:
-		return nil, 0, fmt.Errorf("unknown data type: %c", dataPrefix)
+		return Value{}, 0, fmt.Errorf("unknown data type: %c", dataPrefix)
 	}
 }
 
-func (p *Parser) parseArray(data []byte) (any, int, error) {
+func (p *Parser) parseArray(data []byte) (Value, int, error) {
 	length, afterHeader, err := parseLength(data)
 	if err != nil {
-		return nil, 0, err
+		return Value{}, 0, err
 	}
 
 	if length < 0 {
-		return nil, 0, fmt.Errorf("invalid array length: %d", length)
+		return Value{}, 0, fmt.Errorf("invalid array length: %d", length)
 	}
 
-	values := make([]any, 0, length)
+	value := Value{
+		Type:  ArrayPrefix,
+		Array: make([]Value, 0, length),
+	}
+
 	consumed := len(data) - len(afterHeader) + 1
 
 	for range length {
-		value, n, err := p.parseOne(afterHeader)
+		element, n, err := p.parseOne(afterHeader)
+		p.logger.Debug("parsed array element", "value", value.Print(), "consumed", n)
 		if err != nil {
-			return nil, 0, fmt.Errorf("parse array element: %w", err)
+			return Value{}, 0, fmt.Errorf("parse array element: %w", err)
 		}
-		values = append(values, value)
+		value.Array = append(value.Array, element)
 		afterHeader = afterHeader[n:]
 		consumed += n
 	}
 
-	return values, consumed, nil
+	return value, consumed, nil
 }
 
-func (p *Parser) parseBulk(data []byte) (any, int, error) {
+func (p *Parser) parseBulk(data []byte) (Value, int, error) {
 	length, payload, err := parseLength(data)
 	if err != nil {
-		return nil, 0, err
+		return Value{}, 0, err
 	}
 
 	if length < 0 {
-		return nil, 0, fmt.Errorf("invalid bulk string length: %d", length)
+		return Value{}, 0, fmt.Errorf("invalid bulk string length: %d", length)
 	}
 
 	if len(payload) < length+len(CRLF) {
-		return nil, 0, ErrIncomplete
+		return Value{}, 0, ErrIncomplete
 	}
 
-	value := string(payload[:length])
+	value := Value{
+		Type: BulkPrefix,
+		Bulk: string(payload[:length]),
+	}
+
 	// prefix + header + length + CRLF
 	consumed := len(data) - len(payload) + length + len(CRLF) + 1
 
