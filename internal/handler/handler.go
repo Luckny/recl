@@ -11,6 +11,7 @@ type Handler func(args []string) parser.Value
 
 var Handlers = map[string]Handler{
 	"PING": PingHandler,
+	"SET":  SetHandler,
 }
 
 func HandleValue(v parser.Value) parser.Value {
