@@ -11,6 +11,7 @@ import (
 	"github.com/Luckny/recl/config"
 	"github.com/Luckny/recl/internal/aof"
 	"github.com/Luckny/recl/internal/client"
+	"github.com/Luckny/recl/internal/handler"
 	"github.com/Luckny/recl/internal/parser"
 )
 
@@ -86,12 +87,17 @@ func (s *Server) handleConnection(conn net.Conn, connectionID uint64) {
 		client.Parser.Append(buf[:consumedLen])
 
 		for {
-			_, err := client.Parser.ParseNext()
+			value, err := client.Parser.ParseNext()
 			if errors.Is(err, parser.ErrIncomplete) {
 				break
 			}
 			if err != nil {
 				s.logger.Error("error parsing command", "error", err)
+				return
+			}
+
+			response := handler.HandleValue(value)
+			if err := client.WriteValue(response); err != nil {
 				return
 			}
 

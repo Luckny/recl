@@ -7,45 +7,12 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
-	"strings"
 	"unicode/utf8"
 )
 
 var CRLF = []byte("\r\n")
 
 var ErrIncomplete = errors.New("incomplete RESP value")
-
-type ValueType rune
-
-const (
-	ArrayPrefix ValueType = '*'
-	BulkPrefix  ValueType = '$'
-)
-
-type Value struct {
-	Type  ValueType
-	Bulk  string
-	Array []Value
-}
-
-func (v *Value) Print() string {
-	switch v.Type {
-	case ArrayPrefix:
-		return fmt.Sprintf("Array(%d) - %s", len(v.Array), v.PrintArray())
-	case BulkPrefix:
-		return fmt.Sprintf("Bulk(%d) - %s", len(v.Bulk), v.Bulk)
-	default:
-		return fmt.Sprintf("Unknown(%c)", v.Type)
-	}
-}
-
-func (v *Value) PrintArray() string {
-	values := make([]string, len(v.Array))
-	for i, element := range v.Array {
-		values[i] = element.Print()
-	}
-	return "[" + strings.Join(values, ", ") + "]"
-}
 
 type Parser struct {
 	buf    []byte
@@ -158,4 +125,13 @@ func parseLength(data []byte) (int, []byte, error) {
 	}
 
 	return length, after, nil
+}
+
+func RESPValue(v Value) ([]byte, error) {
+	switch v.Type {
+	case Error:
+		return []byte("-" + v.Error + string(CRLF)), nil
+	default:
+		return nil, fmt.Errorf("unknown value type: %s", string(v.Type))
+	}
 }
