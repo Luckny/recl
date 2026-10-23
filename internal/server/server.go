@@ -23,6 +23,7 @@ type Server struct {
 	aof      *aof.AOF
 	Handlers map[string]handler.Handler
 	store    *storage.Store
+	db       *storage.DB
 }
 
 func NewServer(conf *config.ReclConfig, logger *slog.Logger) (*Server, error) {
@@ -44,13 +45,13 @@ func NewServer(conf *config.ReclConfig, logger *slog.Logger) (*Server, error) {
 		aofStore.SyncFromDisk(logger)
 	}
 
-	store := storage.NewStore(db, aofStore)
+	store := storage.NewStore(db, aofStore, conf)
 
 	server := &Server{
 		config:   conf,
 		logger:   logger,
-		Handlers: handler.InitHandlers(store),
 		store:    store,
+		Handlers: handler.InitHandlers(store),
 	}
 
 	return server, nil

@@ -31,11 +31,8 @@ func NewClient(conn net.Conn, id uint64, logger *slog.Logger) *Client {
 }
 
 func (c *Client) WriteValue(value parser.Value) error {
-	resp, err := parser.RESPValue(value)
-	if err != nil {
-		return err
-	}
-	_, err = io.Copy(c.Conn, bytes.NewReader(resp))
+	resp := parser.RESPValue(value)
+	_, err := io.Copy(c.Conn, bytes.NewReader(resp))
 	if err != nil {
 		c.Logger.Error("failed to write value", "error", err)
 	}

@@ -63,3 +63,12 @@ func SimpleStringValue(message string) Value {
 func ErrorValue(message string) Value {
 	return Value{Type: ErrorType, Error: "ERR " + message}
 }
+
+func CommandValue(command string, args ...string) Value {
+	cmd := Value{Type: ArrayType, Array: make([]Value, len(args)+1)}
+	cmd.Array[0] = BulkStringValue(command)
+	for i, arg := range args {
+		cmd.Array[i+1] = BulkStringValue(arg)
+	}
+	return cmd
+}

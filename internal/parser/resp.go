@@ -126,14 +126,14 @@ func parseLength(data []byte) (int, []byte, error) {
 	return length, after, nil
 }
 
-func RESPValue(v Value) ([]byte, error) {
+func RESPValue(v Value) []byte {
 	switch v.Type {
 	case SimpleStingType:
-		return []byte(string(v.Type) + v.SimpleString + CRLF), nil
+		return []byte(string(v.Type) + v.SimpleString + CRLF)
 	case ErrorType:
-		return []byte(string(v.Type) + v.Error + CRLF), nil
+		return []byte(string(v.Type) + v.Error + CRLF)
 	case NullType:
-		return []byte(string(v.Type) + CRLF), nil
+		return []byte(string(v.Type) + CRLF)
 	case BulkType:
 		return []byte(
 			string(v.Type) +
@@ -141,8 +141,23 @@ func RESPValue(v Value) ([]byte, error) {
 				CRLF +
 				v.Bulk +
 				CRLF,
-		), nil
+		)
+	case ArrayType:
+		var buf bytes.Buffer
+		buf.WriteString(string(v.Type))
+		buf.WriteString(strconv.Itoa(len(v.Array)))
+		buf.WriteString(CRLF)
+
+		for _, element := range v.Array {
+			encoded := RESPValue(element)
+			buf.Write(encoded)
+		}
+		return buf.Bytes()
 	default:
-		return nil, fmt.Errorf("unknown value type: %s", string(v.Type))
+		return []byte(
+			string(v.Type) +
+				strconv.Itoa(len(v.Array)) +
+				CRLF,
+		)
 	}
 }

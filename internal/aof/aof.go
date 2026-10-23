@@ -7,10 +7,13 @@ import (
 	"path"
 
 	"github.com/Luckny/recl/config"
+	"github.com/Luckny/recl/internal/parser"
+	"github.com/Luckny/recl/internal/writer"
 )
 
 type AOF struct {
-	file *os.File
+	file   *os.File
+	writer *writer.Writer
 }
 
 func NewAOF(dataDir string, conf *config.AOFConfig) (*AOF, error) {
@@ -21,7 +24,7 @@ func NewAOF(dataDir string, conf *config.AOFConfig) (*AOF, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &AOF{file}, nil
+	return &AOF{file: file, writer: writer.NewWriter(file)}, nil
 }
 
 func (a *AOF) SyncFromDisk(logger *slog.Logger) error {
@@ -30,4 +33,12 @@ func (a *AOF) SyncFromDisk(logger *slog.Logger) error {
 	logger.Debug("AOF file path", "path", a.file.Name())
 	logger.Debug("Sync Not Yet Implemented")
 	return nil
+}
+
+func (a *AOF) Write(v parser.Value) {
+	a.writer.Write(v)
+}
+
+func (a *AOF) Flush() {
+	a.writer.Flush()
 }
