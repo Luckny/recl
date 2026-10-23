@@ -47,9 +47,9 @@ func (p *Parser) parseOne(data []byte) (value Value, consumed int, err error) {
 	dataAfterPrefix := data[size:]
 
 	switch ValueType(dataPrefix) {
-	case ArrayPrefix:
+	case ArrayType:
 		return p.parseArray(dataAfterPrefix)
-	case BulkPrefix:
+	case BulkType:
 		return p.parseBulk(dataAfterPrefix)
 	default:
 		return Value{}, 0, fmt.Errorf("unknown data type: %c", dataPrefix)
@@ -67,7 +67,7 @@ func (p *Parser) parseArray(data []byte) (Value, int, error) {
 	}
 
 	value := Value{
-		Type:  ArrayPrefix,
+		Type:  ArrayType,
 		Array: make([]Value, 0, length),
 	}
 
@@ -75,7 +75,6 @@ func (p *Parser) parseArray(data []byte) (Value, int, error) {
 
 	for range length {
 		element, n, err := p.parseOne(afterHeader)
-		p.logger.Debug("parsed array element", "value", value.Print(), "consumed", n)
 		if err != nil {
 			return Value{}, 0, fmt.Errorf("parse array element: %w", err)
 		}
@@ -102,7 +101,7 @@ func (p *Parser) parseBulk(data []byte) (Value, int, error) {
 	}
 
 	value := Value{
-		Type: BulkPrefix,
+		Type: BulkType,
 		Bulk: string(payload[:length]),
 	}
 
@@ -129,7 +128,9 @@ func parseLength(data []byte) (int, []byte, error) {
 
 func RESPValue(v Value) ([]byte, error) {
 	switch v.Type {
-	case Error:
+	case SimpleStingType:
+		return []byte("+" + v.SimpleString + string(CRLF)), nil
+	case ErrorType:
 		return []byte("-" + v.Error + string(CRLF)), nil
 	default:
 		return nil, fmt.Errorf("unknown value type: %s", string(v.Type))
