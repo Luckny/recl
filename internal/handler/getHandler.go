@@ -3,16 +3,16 @@ package handler
 import (
 	"log/slog"
 
-	"github.com/Luckny/recl/internal/database"
 	"github.com/Luckny/recl/internal/parser"
+	"github.com/Luckny/recl/internal/storage"
 )
 
 type GetHandler struct {
-	db *database.DB
+	store *storage.Store
 }
 
-func NewGetHandler(db *database.DB) *GetHandler {
-	return &GetHandler{db: db}
+func NewGetHandler(store *storage.Store) *GetHandler {
+	return &GetHandler{store}
 }
 
 func (h *GetHandler) Handle(args []string, logger *slog.Logger) parser.Value {
@@ -22,7 +22,7 @@ func (h *GetHandler) Handle(args []string, logger *slog.Logger) parser.Value {
 
 	key := args[0]
 
-	val, ok := h.db.Get(key)
+	val, ok := h.store.Get(key)
 	if !ok {
 		return parser.NullValue()
 	}

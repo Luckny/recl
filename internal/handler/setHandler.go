@@ -3,16 +3,16 @@ package handler
 import (
 	"log/slog"
 
-	"github.com/Luckny/recl/internal/database"
 	"github.com/Luckny/recl/internal/parser"
+	"github.com/Luckny/recl/internal/storage"
 )
 
 type SetHandler struct {
-	db *database.DB
+	store *storage.Store
 }
 
-func NewSetHandler(db *database.DB) *SetHandler {
-	return &SetHandler{db: db}
+func NewSetHandler(store *storage.Store) *SetHandler {
+	return &SetHandler{store}
 }
 
 func (h *SetHandler) Handle(args []string, logger *slog.Logger) parser.Value {
@@ -23,7 +23,7 @@ func (h *SetHandler) Handle(args []string, logger *slog.Logger) parser.Value {
 	key := args[0]
 	value := args[1]
 
-	h.db.Set(key, value)
+	h.store.Set(key, value)
 
 	return parser.SimpleStringValue("OK")
 }

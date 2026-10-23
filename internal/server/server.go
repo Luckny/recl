@@ -12,9 +12,9 @@ import (
 	"github.com/Luckny/recl/config"
 	"github.com/Luckny/recl/internal/aof"
 	"github.com/Luckny/recl/internal/client"
-	"github.com/Luckny/recl/internal/database"
 	"github.com/Luckny/recl/internal/handler"
 	"github.com/Luckny/recl/internal/parser"
+	"github.com/Luckny/recl/internal/storage"
 )
 
 type Server struct {
@@ -22,7 +22,7 @@ type Server struct {
 	logger   *slog.Logger
 	aof      *aof.AOF
 	Handlers map[string]handler.Handler
-	db       *database.DB
+	store    *storage.Store
 }
 
 func NewServer(conf *config.ReclConfig, logger *slog.Logger) (*Server, error) {
@@ -32,23 +32,27 @@ func NewServer(conf *config.ReclConfig, logger *slog.Logger) (*Server, error) {
 		return nil, err
 	}
 
-	db := database.NewDB()
-
-	server := &Server{
-		config:   conf,
-		logger:   logger,
-		Handlers: handler.InitHandlers(db),
-	}
+	db := storage.NewDB()
+	var aofStore *aof.AOF
 
 	if conf.AOF.Enabled {
-		aof, err := aof.NewAOF(conf.DataDir, &conf.AOF)
+		aofStore, err = aof.NewAOF(conf.DataDir, &conf.AOF)
 		if err != nil {
 			return nil, err
 		}
 
-		aof.SyncFromDisk(logger)
-		server.aof = aof
+		aofStore.SyncFromDisk(logger)
 	}
+
+	store := storage.NewStore(db, aofStore)
+
+	server := &Server{
+		config:   conf,
+		logger:   logger,
+		Handlers: handler.InitHandlers(store),
+		store:    store,
+	}
+
 	return server, nil
 }
 

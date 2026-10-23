@@ -1,5 +1,5 @@
-// Package database provides a simple in-memory key-value store.
-package database
+// Package storage provides a simple in-memory key-value store.
+package storage
 
 import "sync"
 
@@ -19,13 +19,13 @@ func NewDB() *DB {
 	}
 }
 
-func (d *DB) Set(key string, value string) {
+func (d *DB) set(key string, value string) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.store[key] = &Val{Data: value}
 }
 
-func (d *DB) Get(key string) (*Val, bool) {
+func (d *DB) get(key string) (*Val, bool) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	val, ok := d.store[key]

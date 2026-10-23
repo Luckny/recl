@@ -3,16 +3,16 @@ package handler
 import (
 	"log/slog"
 
-	"github.com/Luckny/recl/internal/database"
 	"github.com/Luckny/recl/internal/parser"
+	"github.com/Luckny/recl/internal/storage"
 )
 
 type PingHandler struct {
-	db *database.DB
+	store *storage.Store
 }
 
-func NewPingHandler(db *database.DB) *PingHandler {
-	return &PingHandler{db: db}
+func NewPingHandler(store *storage.Store) *PingHandler {
+	return &PingHandler{store: store}
 }
 
 func (h *PingHandler) Handle(args []string, logger *slog.Logger) parser.Value {
