@@ -27,11 +27,15 @@ func main() {
 
 	logger := logging.New(&cfg.App.Logging)
 
-	_, err = server.NewServerState(&cfg.Recl, logger)
+	server, err := server.NewServer(&cfg.Recl, logger)
 	if err != nil {
 		logger.Error("Error creating server state", "err", err)
 		os.Exit(GeneralError)
 	}
 
-	// server.Run(state)
+	err = server.Run()
+	if err != nil {
+		logger.Error("Error running server", "err", err)
+		os.Exit(GeneralError)
+	}
 }

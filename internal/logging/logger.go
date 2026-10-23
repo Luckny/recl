@@ -2,6 +2,9 @@
 package logging
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -18,6 +21,21 @@ const (
 
 var defaultWriter = os.Stderr
 
+type PrettyJSONWriter struct {
+	w io.Writer
+}
+
+func (pjw *PrettyJSONWriter) Write(p []byte) (n int, err error) {
+	var buf bytes.Buffer
+
+	if err := json.Indent(&buf, p, "", "  "); err != nil {
+		return 0, err
+	}
+
+	buf.WriteByte('\n')
+	return pjw.w.Write(buf.Bytes())
+}
+
 func New(config *config.LogConfig) *slog.Logger {
 	logLevel := &Level{}
 	logLevel.Set(config.Level)
@@ -30,7 +48,7 @@ func New(config *config.LogConfig) *slog.Logger {
 	logHandlerOpts.ReplaceAttr = replaceAttrFunc(logLevel)
 
 	if config.Format != "" && config.Format == "json" {
-		return slog.New(slog.NewJSONHandler(defaultWriter, logHandlerOpts))
+		return slog.New(slog.NewJSONHandler(&PrettyJSONWriter{w: defaultWriter}, logHandlerOpts))
 	}
 
 	return slog.New(slog.NewTextHandler(defaultWriter, logHandlerOpts))
