@@ -1,19 +1,17 @@
 package storage
 
 import (
-	"github.com/Luckny/recl/config"
 	"github.com/Luckny/recl/internal/aof"
 	"github.com/Luckny/recl/internal/parser"
 )
 
 type Store struct {
-	db   *DB
-	aof  *aof.AOF
-	conf *config.ReclConfig
+	db  *DB
+	aof *aof.AOF
 }
 
-func NewStore(db *DB, aof *aof.AOF, conf *config.ReclConfig) *Store {
-	return &Store{db: db, aof: aof, conf: conf}
+func NewStore(db *DB, aof *aof.AOF) *Store {
+	return &Store{db: db, aof: aof}
 }
 
 func (s *Store) SetAofStore(aof *aof.AOF) (ok bool) {
@@ -25,10 +23,6 @@ func (s *Store) Set(key string, value string) {
 	if s.aof != nil {
 		command := parser.CommandValue("SET", key, value)
 		s.aof.Write(command)
-
-		if s.conf.AOF.Sync == config.AOFSyncModeAlways {
-			s.aof.Flush()
-		}
 	}
 	s.db.set(key, value)
 }

@@ -34,7 +34,7 @@ func NewServer(conf *config.ReclConfig, logger *slog.Logger) (*Server, error) {
 	}
 
 	db := storage.NewDB()
-	store := storage.NewStore(db, nil, conf)
+	store := storage.NewStore(db, nil)
 
 	server := &Server{
 		config:   conf,

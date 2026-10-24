@@ -13,8 +13,9 @@ import (
 )
 
 type AOF struct {
-	file   *os.File
-	writer *writer.Writer
+	file     *os.File
+	writer   *writer.Writer
+	syncMode config.AOFSyncMode
 }
 
 func NewAOF(dataDir string, conf *config.AOFConfig) (*AOF, error) {
@@ -25,7 +26,11 @@ func NewAOF(dataDir string, conf *config.AOFConfig) (*AOF, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &AOF{file: file, writer: writer.NewWriter(file)}, nil
+	return &AOF{
+		file:     file,
+		writer:   writer.NewWriter(file),
+		syncMode: conf.Sync,
+	}, nil
 }
 
 func (a *AOF) GetSyncValueFromDisk(logger *slog.Logger) ([]parser.Value, error) {
@@ -53,6 +58,10 @@ func (a *AOF) GetSyncValueFromDisk(logger *slog.Logger) ([]parser.Value, error) 
 
 func (a *AOF) Write(v parser.Value) {
 	a.writer.Write(v)
+
+	if a.syncMode == config.AOFSyncModeAlways {
+		a.Flush()
+	}
 }
 
 func (a *AOF) Flush() {
