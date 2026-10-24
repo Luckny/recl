@@ -16,6 +16,11 @@ func NewStore(db *DB, aof *aof.AOF, conf *config.ReclConfig) *Store {
 	return &Store{db: db, aof: aof, conf: conf}
 }
 
+func (s *Store) SetAofStore(aof *aof.AOF) (ok bool) {
+	s.aof = aof
+	return true
+}
+
 func (s *Store) Set(key string, value string) {
 	if s.aof != nil {
 		command := parser.CommandValue("SET", key, value)

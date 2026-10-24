@@ -34,24 +34,33 @@ func NewServer(conf *config.ReclConfig, logger *slog.Logger) (*Server, error) {
 	}
 
 	db := storage.NewDB()
-	var aofStore *aof.AOF
-
-	if conf.AOF.Enabled {
-		aofStore, err = aof.NewAOF(conf.DataDir, &conf.AOF)
-		if err != nil {
-			return nil, err
-		}
-
-		aofStore.SyncFromDisk(logger)
-	}
-
-	store := storage.NewStore(db, aofStore, conf)
+	store := storage.NewStore(db, nil, conf)
 
 	server := &Server{
 		config:   conf,
 		logger:   logger,
 		store:    store,
 		Handlers: handler.InitHandlers(store),
+	}
+
+	if conf.AOF.Enabled {
+		aofStore, err := aof.NewAOF(conf.DataDir, &conf.AOF)
+		if err != nil {
+			return nil, err
+		}
+
+		if ok := store.SetAofStore(aofStore); !ok {
+			return nil, errors.New("failed to set aof store")
+		}
+
+		commands, err := aofStore.GetSyncValueFromDisk(logger)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, command := range commands {
+			server.handleValue(command)
+		}
 	}
 
 	return server, nil
@@ -108,7 +117,7 @@ func (s *Server) handleConnection(conn net.Conn, connectionID uint64) {
 				return
 			}
 
-			response := s.handleValue(value, client.Logger)
+			response := s.handleValue(value)
 			if err := client.WriteValue(response); err != nil {
 				return
 			}
@@ -117,7 +126,7 @@ func (s *Server) handleConnection(conn net.Conn, connectionID uint64) {
 	}
 }
 
-func (s *Server) handleValue(v parser.Value, logger *slog.Logger) parser.Value {
+func (s *Server) handleValue(v parser.Value) parser.Value {
 	// should arrive as array
 	if v.Type != parser.ArrayType {
 		return parser.ErrorValue("expected an array")
@@ -141,5 +150,5 @@ func (s *Server) handleValue(v parser.Value, logger *slog.Logger) parser.Value {
 		return parser.ErrorValue("invalid command")
 	}
 
-	return handler.Handle(args[1:], logger)
+	return handler.Handle(args[1:], s.logger)
 }

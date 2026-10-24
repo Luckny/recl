@@ -2,6 +2,7 @@
 package aof
 
 import (
+	"errors"
 	"log/slog"
 	"os"
 	"path"
@@ -27,12 +28,27 @@ func NewAOF(dataDir string, conf *config.AOFConfig) (*AOF, error) {
 	return &AOF{file: file, writer: writer.NewWriter(file)}, nil
 }
 
-func (a *AOF) SyncFromDisk(logger *slog.Logger) error {
-	// not yet implemented
-	logger.Info("Syncing AOF from disk")
-	logger.Debug("AOF file path", "path", a.file.Name())
-	logger.Debug("Sync Not Yet Implemented")
-	return nil
+func (a *AOF) GetSyncValueFromDisk(logger *slog.Logger) ([]parser.Value, error) {
+	content, err := os.ReadFile(a.file.Name())
+	if err != nil {
+		return nil, err
+	}
+	ps := parser.NewParser(logger)
+	ps.Append(content)
+
+	var commands []parser.Value
+
+	for {
+		value, err := ps.ParseNext()
+		if errors.Is(err, parser.ErrIncomplete) {
+			return commands, nil
+		}
+		if err != nil {
+			logger.Error("error parsing command", "error", err)
+			return nil, err
+		}
+		commands = append(commands, value)
+	}
 }
 
 func (a *AOF) Write(v parser.Value) {
